@@ -18,6 +18,8 @@ import pandas as pd
 import os
 import sys
 
+
+
 current_time = datetime.now()
 #MCP setup
 spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
@@ -27,22 +29,28 @@ mcp = MCP.MCP3008(spi, cs)
 #channel
 chan0 = AnalogIn(mcp, MCP.P0)
 chan1 = AnalogIn(mcp, MCP.P1)
-sensor = adafruit_dht.DHT22(board.D4)
-temperature_c = sensor.temperature
-humidity = sensor.humidity
 
-flowerish_menu_str = "✿✿✿ Flowerish Menu ✿✿✿\n1. Register Plant\n2. Test Notification\n3. Start Data Collection\n4. Print Data Collection\nType in the number corresponding with desired option"
+
+flowerish_menu_str = "✿✿✿ Flowerish Menu ✿✿✿\n1. Register Plant\n2. Test Notification\n3. Start Data Collection\n4. Print Data Collection\n5. Register Sensor\nType in the number corresponding with desired option"
 print(flowerish_menu_str)
 user_input = input()
 
 def weather():
-    requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
+    try:
+        sensor = adafruit_dht.DHT22(board.D4)
+        temperature_c = sensor.temperature
+        humidity = sensor.humidity
+        requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
             data=('Temp={0:0.1f}C, Humidity={1:0.1f}%'.format(temperature_c, humidity)).encode(encoding='utf-8'))
+    except RuntimeError:
+        weather()
+    else:
+        None
+    
 
 def sensor_read():
     conn = sqlite3.connect('plantdata.db')
     cursor = conn.cursor() 
-    
     #convert string --> float
     ldr_voltage_results = str(chan1.voltage)
     ldr_voltage = float(ldr_voltage_results)
@@ -57,11 +65,11 @@ def sensor_read():
         requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
             data="Plant Light low, turning on light".encode(encoding='utf-8'))
         
-    if soil_moisture_voltage >= 3:
+    if soil_moisture_voltage >= 3.261:
         print('Moisture is bad')
         requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
             data="Plant moisture is bad, watering plant".encode(encoding='utf-8'))
-    elif soil_moisture_voltage <3:
+    elif soil_moisture_voltage < 3.261:
         print('Moisture is fine')
     
     #plant data insertion into sql
@@ -70,11 +78,8 @@ def sensor_read():
     cursor.execute(insert_plant_data, ('2', current_time, soil_moisture_voltage))
     print('data inserted')
     conn.commit()
-    '''
-    cursor.execute('SELECT * FROM SENSOREVENT')
-    for row in cursor.fetchall():
-        print(row)'''
     conn.close()
+    
 
 def print_plant():  
     conn = sqlite3.connect('plantdata.db')
@@ -82,6 +87,28 @@ def print_plant():
     df = pd.read_sql_query('SELECT * from SensorEvent', conn)
     pprint(df.head())
     conn.close()
+
+def register_sensor():
+    conn = sqlite3.connect('plantdata.db')
+    cursor = conn.cursor()
+    print('What sensor are you registering?\n1. LDR sensor\n2. Soil moisture')
+    sensor_response = input()
+    if sensor_response == '1':
+        insert_plant_data = 'INSERT INTO SENSOR(ID, Type, Active) VALUES (?, ?, ?)'
+        cursor.execute(insert_plant_data, ('1', 'LDR', 'active'))
+        requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
+            data="LDR sensor registered".encode(encoding='utf-8'))
+        print('Sensor Registered!')
+    elif sensor_response == '2':
+        insert_plant_data = 'INSERT INTO SENSOR (ID, Type, Active) VALUES (?, ?, ?)'
+        cursor.execute(insert_plant_data, ('2', 'Soil Moisture', 'active'))
+        requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
+            data="Soil moisture sensor registered".encode(encoding='utf-8'))
+        print('Sensor Registered!')
+    conn.commit()
+    conn.close()
+
+
 
 def take_image():
     current_time = datetime.now()
@@ -123,7 +150,6 @@ def take_image():
         conn.commit()
         print('data inserted')
 
-
     except UnboundLocalError:
         print('No plant found, trying again')
         take_image()
@@ -150,18 +176,25 @@ if user_input =='3':
     print('Data Collection Started')
     sensor_read()
     schedule.every().day.at('09:00').do(weather)
-    schedule.every(1).minutes.do(sensor_read)  
+    schedule.every(.25).minutes.do(sensor_read)  
 if user_input =='4':
     print('Printing Collected Data')
     print_plant()
+    restart()
+if user_input =='5':
+    print('Sensor registration started!')
+    register_sensor()
     restart()
 
 
 while True:
     schedule.run_pending()
-    time.sleep(5)
-restart()
 
-#this is very reliable
-#mhm
-# :) :) :) 
+
+
+ 
+    
+
+
+
+
