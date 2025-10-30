@@ -40,7 +40,7 @@ def weather():
         sensor = adafruit_dht.DHT22(board.D4)
         temperature_c = sensor.temperature
         humidity = sensor.humidity
-        requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
+        requests.post("https://ntfy.sh/#########",
             data=('Temp={0:0.1f}C, Humidity={1:0.1f}%'.format(temperature_c, humidity)).encode(encoding='utf-8'))
     except RuntimeError:
         weather()
@@ -62,12 +62,12 @@ def sensor_read():
         print('Good light')
     elif ldr_voltage < 1:
         print('Bad light')
-        requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
+        requests.post("https://ntfy.sh/#########",
             data="Plant Light low, turning on light".encode(encoding='utf-8'))
         
     if soil_moisture_voltage >= 3.261:
         print('Moisture is bad')
-        requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
+        requests.post("https://ntfy.sh/##########",
             data="Plant moisture is bad, watering plant".encode(encoding='utf-8'))
     elif soil_moisture_voltage < 3.261:
         print('Moisture is fine')
@@ -96,13 +96,13 @@ def register_sensor():
     if sensor_response == '1':
         insert_plant_data = 'INSERT INTO SENSOR(ID, Type, Active) VALUES (?, ?, ?)'
         cursor.execute(insert_plant_data, ('1', 'LDR', 'active'))
-        requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
+        requests.post("https://ntfy.sh/############",
             data="LDR sensor registered".encode(encoding='utf-8'))
         print('Sensor Registered!')
     elif sensor_response == '2':
         insert_plant_data = 'INSERT INTO SENSOR (ID, Type, Active) VALUES (?, ?, ?)'
         cursor.execute(insert_plant_data, ('2', 'Soil Moisture', 'active'))
-        requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
+        requests.post("https://ntfy.sh/############",
             data="Soil moisture sensor registered".encode(encoding='utf-8'))
         print('Sensor Registered!')
     conn.commit()
@@ -121,7 +121,7 @@ def take_image():
 #Inference
     CLIENT = InferenceHTTPClient(
         api_url="https://detect.roboflow.com",
-        api_key="vNkdZXvKAnabW7O1kyqa"
+        api_key="#################"
 )
 
     conn = sqlite3.connect('plantdata.db')
@@ -155,7 +155,7 @@ def take_image():
         take_image()
     else:
     #notification
-        requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
+        requests.post("https://ntfy.sh/########",
             data=f'Registered: {plant_type}, At: {current_time}'.encode(encoding='utf-8'))
     conn.close()
     print('Registration Process completed!')
@@ -169,7 +169,7 @@ if user_input =='1':
     restart()
 if user_input =='2':
     print('Testing Notifications!')
-    requests.post("https://ntfy.sh/lITkL94GTR8Ub6Wn",
+    requests.post("https://ntfy.sh/##############",
             data='Test Notification'.encode(encoding='utf-8'))
     restart()
 if user_input =='3':
